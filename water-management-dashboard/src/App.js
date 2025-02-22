@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  ThemeProvider,
-  createTheme,
   Container,
   Typography,
   Box,
@@ -12,89 +10,15 @@ import {
   Stack,
   Grid
 } from "@mui/material";
-import { Sprout, CloudRain, Thermometer } from "lucide-react";
+import { Sprout, CloudRain, Thermometer, MessageSquare } from "lucide-react";
+import { ThemeProvider } from "@mui/material/styles";
 import FarmForm from "./Components/FarmForm";
+import ChatBox from "./Components/ChatBox";
+import theme from "./theme"; // 我们会把主题配置移到单独的文件
 import "./App.css";
 
-const theme = createTheme({
-  typography: {
-    fontFamily: [
-      "Quicksand",
-      "-apple-system",
-      "BlinkMacSystemFont",
-      "Arial",
-      "sans-serif"
-    ].join(","),
-    h1: {
-      fontSize: "2.5rem",
-      fontWeight: 600,
-      letterSpacing: "0.02em",
-      fontFamily: "Quicksand"
-    },
-    h2: {
-      fontSize: "1.75rem",
-      fontWeight: 600,
-      letterSpacing: "0.01em",
-      fontFamily: "Quicksand"
-    },
-    h6: {
-      fontFamily: "Quicksand",
-      fontWeight: 600
-    },
-    subtitle1: {
-      fontSize: "1.1rem",
-      lineHeight: 1.5,
-      letterSpacing: "0.01em",
-      fontWeight: 500
-    }
-  },
-  palette: {
-    primary: {
-      main: "#62958D",
-      light: "#89AEA8",
-      dark: "#4B746E"
-    },
-    secondary: {
-      main: "#A3C4BC",
-      light: "#C2DAD4",
-      dark: "#7FA199"
-    },
-    text: {
-      primary: "#2C4D47",
-      secondary: "#5C7972"
-    }
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: "16px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)"
-        }
-      }
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: "none",
-          borderRadius: "8px",
-          fontWeight: 500,
-          fontFamily: "Quicksand"
-        }
-      }
-    },
-    MuiAlert: {
-      styleOverrides: {
-        root: {
-          borderRadius: "12px"
-        }
-      }
-    }
-  }
-});
-
-// App.js
 function App() {
+  const [isOpen, setIsOpen] = useState(false);
   const [advice, setAdvice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -104,39 +28,43 @@ function App() {
     rainfall: null
   });
 
-  // 初始通过定位更新天气（可选）
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
+    const initializeWeather = async () => {
+      if (navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+          
           const { latitude, longitude } = position.coords;
-          fetch(`https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${latitude},${longitude}`)
-            .then(response => response.json())
-            .then(data => {
-              if(data.current) {
-                setWeather({
-                  temperature: data.current.temp_c,
-                  humidity: data.current.humidity,
-                  rainfall: data.current.precip_mm
-                });
-              }
-            })
-            .catch(err => {
-              console.error("Weather API error:", err);
+          const response = await fetch(
+            `https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${latitude},${longitude}`
+          );
+          const data = await response.json();
+          
+          if (data.current) {
+            setWeather({
+              temperature: data.current.temp_c,
+              humidity: data.current.humidity,
+              rainfall: data.current.precip_mm
             });
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
+          }
+        } catch (error) {
+          console.error("Weather initialization error:", error);
         }
-      );
-    }
+      }
+    };
+
+    initializeWeather();
   }, []);
 
-  // 根据地址更新天气信息
   const updateWeatherByAddress = async (address) => {
     try {
-      const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`);
+      const response = await fetch(
+        `https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`
+      );
       const data = await response.json();
+      
       if (data.current) {
         setWeather({
           temperature: data.current.temp_c,
@@ -149,18 +77,15 @@ function App() {
     }
   };
 
-  // 修改 handleFormSubmit，使用 farmData.waterAdvice（由 FarmForm 生成的 AI 建议）
   const handleFormSubmit = async (farmData) => {
     setLoading(true);
     setError(null);
     
     try {
-      // 这里直接使用 FarmForm 中生成的 waterAdvice
       setAdvice(farmData.waterAdvice || "No advice provided.");
-      // 更新天气信息（可选）
       await updateWeatherByAddress(farmData.address);
     } catch (err) {
-      console.error("Backend call failed:", err);
+      console.error("Error in form submission:", err);
       setError("Unable to generate irrigation advice. Please try again.");
     } finally {
       setLoading(false);
@@ -169,30 +94,44 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        minHeight: '100vh',
-        background: 'linear-gradient(to top, #62958D -5%, #A3C4BC 40%, #E8F3F1 100%)',
-        position: 'relative',
-      }}>
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #E8F3F1 0%, #A3C4BC 100%)',
+          position: 'relative',
+          pb: 8 // Add padding bottom to avoid chat button overlap
+        }}
+      >
         {/* Header Section */}
         <Box 
           sx={{ 
             pt: 4, 
             pb: 3,
             position: 'relative',
-            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             backdropFilter: 'blur(8px)',
           }}
         >
           <Container maxWidth="lg">
-            <Stack direction="row" alignItems="center" spacing={2} justifyContent="center">
-              <Sprout size={32} style={{ color: '#62958D' }} />
-              <Typography variant="h1" sx={{ 
-                color: '#2C4D47',
-                textShadow: '0 1px 2px rgba(255,255,255,0.2)'
-              }}>
-                Smart Farm Assistant
-              </Typography>
+            <Stack direction="row" alignItems="center" spacing={2} justifyContent="space-between">
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Sprout size={32} color="#62958D" />
+                <Typography variant="h1" sx={{ 
+                  color: '#2C4D47',
+                  textShadow: '0 1px 2px rgba(255,255,255,0.2)'
+                }}>
+                  Smart Farm Assistant
+                </Typography>
+              </Stack>
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`bg-[#62958D] hover:bg-[#4B746E] text-white rounded-full p-2 flex items-center gap-2 transition-all duration-200 shadow-md ${
+                  isOpen ? 'bg-[#4B746E]' : ''
+                }`}
+              >
+                <MessageSquare size={20} />
+                <span className="text-sm font-medium">Chat with AI</span>
+              </button>
             </Stack>
             <Typography 
               variant="subtitle1" 
@@ -209,14 +148,15 @@ function App() {
         </Box>
 
         {/* Main Content */}
-        <Container maxWidth="lg" sx={{ py: 2, position: 'relative' }}>
+        <Container maxWidth="lg" sx={{ py: 4, position: 'relative' }}>
           <Grid container spacing={4}>
             {/* Left Column - Form */}
             <Grid item xs={12} md={7}>
               <Card sx={{ 
-                background: 'rgba(255, 255, 255, 0.92)',
+                background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(163, 196, 188, 0.2)',
+                borderRadius: 4,
               }}>
                 <CardContent sx={{ p: 4 }}>
                   <Stack spacing={4}>
@@ -239,9 +179,10 @@ function App() {
               <Stack spacing={4}>
                 {/* Environmental Stats */}
                 <Card sx={{ 
-                  background: 'rgba(255, 255, 255, 0.92)',
+                  background: 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(8px)',
                   border: '1px solid rgba(163, 196, 188, 0.2)',
+                  borderRadius: 4,
                 }}>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom sx={{ color: '#2C4D47' }}>
@@ -250,7 +191,7 @@ function App() {
                     <Grid container spacing={3} sx={{ mt: 1 }}>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <Thermometer style={{ color: '#62958D' }} size={28} />
+                          <Thermometer color="#62958D" size={28} />
                           <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
                             Temperature
                           </Typography>
@@ -261,7 +202,7 @@ function App() {
                       </Grid>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <CloudRain style={{ color: '#62958D' }} size={28} />
+                          <CloudRain color="#62958D" size={28} />
                           <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
                             Rainfall
                           </Typography>
@@ -272,7 +213,7 @@ function App() {
                       </Grid>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <Sprout style={{ color: '#62958D' }} size={28} />
+                          <Sprout color="#62958D" size={28} />
                           <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
                             Humidity
                           </Typography>
@@ -291,50 +232,22 @@ function App() {
                     background: 'linear-gradient(135deg, #62958D 0%, #89AEA8 100%)',
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(163, 196, 188, 0.2)',
-                    maxHeight: '400px', // Set maximum height
-                    display: 'flex',
-                    flexDirection: 'column'
+                    borderRadius: 4,
                   }}>
-                    <CardContent sx={{ 
-                      p: 3,
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden'
-                    }}>
-                      <Typography variant="h6" gutterBottom sx={{ 
-                        color: 'white',
-                        mb: 2,
-                        fontWeight: 600
-                      }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Typography variant="h6" gutterBottom sx={{ color: 'white' }}>
                         Smart Irrigation Advice
                       </Typography>
                       <Box sx={{ 
-                        flex: 1,
-                        overflow: 'auto',
+                        mt: 2,
+                        p: 2.5,
                         borderRadius: 2,
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                        p: 2.5,
-                        '&::-webkit-scrollbar': {
-                          width: '8px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          borderRadius: '4px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: 'rgba(255, 255, 255, 0.3)',
-                          borderRadius: '4px',
-                          '&:hover': {
-                            background: 'rgba(255, 255, 255, 0.4)',
-                          },
-                        },
                       }}>
                         <Typography sx={{ 
                           color: 'white',
                           fontWeight: 500,
                           lineHeight: 1.6,
-                          letterSpacing: '0.015em',
                           whiteSpace: 'pre-wrap'
                         }}>
                           {advice}
@@ -347,21 +260,20 @@ function App() {
                 {/* Loading State */}
                 {loading && (
                   <Card sx={{ 
-                    background: 'rgba(255, 255, 255, 0.92)',
+                    background: 'rgba(255, 255, 255, 0.95)',
                     backdropFilter: 'blur(8px)',
+                    borderRadius: 4,
                   }}>
                     <CardContent sx={{ p: 3 }}>
                       <Stack spacing={2}>
                         <Typography variant="h6" sx={{ color: '#2C4D47' }}>
                           Analyzing Farm Data
                         </Typography>
-                        <LinearProgress 
-                          sx={{ 
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#62958D'
-                            }
-                          }} 
-                        />
+                        <LinearProgress sx={{ 
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: '#62958D'
+                          }
+                        }} />
                       </Stack>
                     </CardContent>
                   </Card>
@@ -371,12 +283,10 @@ function App() {
                 {error && (
                   <Alert 
                     severity="error"
-                    variant="outlined"
                     sx={{ 
                       borderRadius: 2,
                       backdropFilter: 'blur(8px)',
-                      background: 'rgba(255, 255, 255, 0.92)',
-                      border: '1px solid rgba(163, 196, 188, 0.2)',
+                      background: 'rgba(255, 255, 255, 0.95)',
                     }}
                   >
                     {error}
@@ -386,6 +296,9 @@ function App() {
             </Grid>
           </Grid>
         </Container>
+
+        {/* Chat Component */}
+        <ChatBox isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </Box>
     </ThemeProvider>
   );
