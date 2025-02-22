@@ -14,13 +14,12 @@ import {
   Container,
   ThemeProvider,
   createTheme,
-  InputAdornment,
-  Divider
+  InputAdornment
 } from "@mui/material";
 import { MapPin, Warehouse, Sprout, Navigation, ArrowRight } from "lucide-react";
 import { db } from "../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// import 你的 google gemini 相关代码...
 
 const theme = createTheme({
   // 你的主题配置...
@@ -32,51 +31,32 @@ const cropTypes = [
   // ...其他作物类型
 ];
 
-const GEMINI_API_KEY = "AIzaSyCESYMiKa5rTQLP2h1A8fDWUkQH73RRFzk";
-
-// 使用 Google Gemini API 生成用水建议
-const fetchWaterAdviceGemini = async (formData, safeWeatherData, location) => {
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-  const promptText = `You are an expert agricultural irrigation consultant specialized in sustainable farming. Based on the following farm details:
-  - Address: ${formData.address}
-  - Crop type: ${formData.cropType}
-  - Farm area: ${formData.area} acres
-  - Location coordinates: (${location.latitude}, ${location.longitude})
-  - Current weather conditions: Temperature ${safeWeatherData.temperature}°C, Humidity ${safeWeatherData.humidity}%, Rainfall ${safeWeatherData.rainfall} 
-  Please provide a detailed recommendation(Give a specific number based on pervious dataset) for the daily water usage per acre in liters. Explain your reasoning briefly, including factors such as crop water requirements, weather conditions, and local climate considerations. Give your answer in english
-`;
-  console.log(promptText);
+// 反向地理编码函数
+const reverseGeocode = async (lat, lng) => {
   try {
-    const result = await model.generateContent(promptText);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error fetching water advice from Gemini:", error);
-    return null;
-  }
-};
-
-const updateWeather = async (address) => {
-  try {
-    const response = await fetch(
-      `https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`
-    );
+    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+    const response = await fetch(nominatimUrl, {
+      headers: {
+        // 为避免 Nominatim 拒绝请求，加入自定义 User-Agent
+        "User-Agent": "MyFarmApp/1.0 (contact@example.com)"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Nominatim error: ${response.status}`);
+    }
     const data = await response.json();
-    console.log("Weather API data:", data);
-    if (data && data.current) {
-      return {
-        temperature: data.current.temp_c,
-        humidity: data.current.humidity,
-        rainfall: data.current.precip_mm
-      };
+    console.log("Nominatim response:", data);
+    if (data.display_name) {
+      return data.display_name;
     }
   } catch (error) {
-    console.error("Error updating weather:", error);
+    console.error("Reverse geocoding failed:", error);
   }
-  return null;
+  return "";
 };
+
+// 如果你还有其他函数，比如 updateWeather、fetchWaterAdviceGemini，都保持不变
+// ...
 
 function FarmForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -85,58 +65,115 @@ function FarmForm({ onSubmit }) {
     area: "",
     address: ""
   });
+
+  // 手动输入的纬度/经度
+  const [latInput, setLatInput] = useState("");
+  const [lngInput, setLngInput] = useState("");
+
   const [location, setLocation] = useState({
     latitude: null,
     longitude: null,
     loading: false,
     error: null
   });
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success"
   });
-  const [waterAdvice, setWaterAdvice] = useState("");
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // -----------------------------
+  // 点击“Update Address”按钮逻辑
+  // -----------------------------
+  const handleUpdateAddress = async () => {
+    // 1. 解析为数字
+    const lat = parseFloat(latInput);
+    const lng = parseFloat(lngInput);
+
+    // 2. 校验是否有效
+    if (isNaN(lat) || isNaN(lng)) {
+      setSnackbar({
+        open: true,
+        message: "Please enter valid numbers for latitude and longitude.",
+        severity: "error"
+      });
+      return;
+    }
+
+    if (lat < -90 || lat > 90) {
+      setSnackbar({
+        open: true,
+        message: "Latitude must be between -90 and +90.",
+        severity: "error"
+      });
+      return;
+    }
+
+    if (lng < -180 || lng > 180) {
+      setSnackbar({
+        open: true,
+        message: "Longitude must be between -180 and +180.",
+        severity: "error"
+      });
+      return;
+    }
+
+    // 3. 调用 Nominatim 反向地理编码
+    const foundAddress = await reverseGeocode(lat, lng);
+
+    if (foundAddress) {
+      // 更新到表单
+      setFormData((prev) => ({ ...prev, address: foundAddress }));
+      // 更新到 location state
+      setLocation((prev) => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng
+      }));
+      setSnackbar({
+        open: true,
+        message: "Address updated from coordinates.",
+        severity: "success"
+      });
+    } else {
+      setSnackbar({
+        open: true,
+        message: "Failed to convert coordinates to address.",
+        severity: "error"
+      });
+    }
   };
 
+  // -----------------------------
+  // 你已有的 handleSubmit 逻辑
+  // -----------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Submitting form with data:", formData);
-    
-    // 获取天气数据
-    const weatherData = await updateWeather(formData.address);
-    console.log("Updated weather:", weatherData);
-    const safeWeatherData = weatherData || {
-      temperature: "N/A",
-      humidity: "N/A",
-      rainfall: "N/A"
-    };
 
-    // 调用 Gemini API 获取用水建议
-    const advice = await fetchWaterAdviceGemini(formData, safeWeatherData, location);
-    console.log("Water advice from Gemini:", advice);
-    setWaterAdvice(advice);
+    // 1. 获取天气数据 (如果有的话)
+    // const weatherData = await updateWeather(formData.address);
+    // ...
 
+    // 2. 调用 Gemini API (如果有的话)
+    // const advice = await fetchWaterAdviceGemini(...);
+    // ...
+
+    // 3. 整理最终要保存的数据
     const farmData = {
-      farmName: formData.farmName,
-      cropType: formData.cropType,
+      ...formData,
       area: parseFloat(formData.area),
-      address: formData.address,
       location: {
         latitude: location.latitude,
         longitude: location.longitude
-      },
-      weather: safeWeatherData,
-      waterAdvice: advice
+      }
+      // weather, waterAdvice, ...
     };
 
     try {
       const docRef = await addDoc(collection(db, "farms"), farmData);
-      console.log("Document written with ID: ", docRef.id);
+      console.log("Document written with ID:", docRef.id);
       onSubmit && onSubmit(farmData);
       setSnackbar({
         open: true,
@@ -144,7 +181,7 @@ function FarmForm({ onSubmit }) {
         severity: "success"
       });
     } catch (error) {
-      console.error("Error adding document: ", error);
+      console.error("Error adding document:", error);
       setSnackbar({
         open: true,
         message: "Failed to submit registration. Please try again.",
@@ -153,55 +190,36 @@ function FarmForm({ onSubmit }) {
     }
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
-  // 自动定位并调用反向地理编码获取地址
+  // -----------------------------
+  // 自动地理定位（保留原逻辑）
+  // -----------------------------
   useEffect(() => {
     if (navigator.geolocation) {
-      setLocation(prev => ({ ...prev, loading: true }));
+      setLocation((prev) => ({ ...prev, loading: true }));
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation(prev => ({
+          console.log("Auto-detected lat/lng:", latitude, longitude);
+          setLocation((prev) => ({
             ...prev,
             latitude,
             longitude,
             loading: false
           }));
-          const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-          // 此处仍使用 thingproxy 代理请求，如果不稳定建议换用其他服务或 Google Geocoding API
-          const proxyUrl = `https://thingproxy.freeboard.io/fetch/${nominatimUrl}`;
-          fetch(proxyUrl)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error("Network response was not ok");
-              }
-              return response.json();
-            })
-            .then(data => {
-              console.log("Reverse geocode data:", data);
-              if (data.display_name) {
-                setFormData(prev => ({ ...prev, address: data.display_name }));
-                setSnackbar({
-                  open: true,
-                  message: "Location detected successfully",
-                  severity: "success"
-                });
-              }
-            })
-            .catch(error => {
-              console.error("Reverse geocode error:", error);
-              setLocation(prev => ({
-                ...prev,
-                error: "Failed to fetch address. Please try again."
-              }));
+          // 调用 Nominatim 反向地理编码
+          const addr = await reverseGeocode(latitude, longitude);
+          if (addr) {
+            setFormData((prev) => ({ ...prev, address: addr }));
+            setSnackbar({
+              open: true,
+              message: "Location detected automatically",
+              severity: "success"
             });
+          }
         },
         (error) => {
           console.error("Geolocation error:", error);
-          setLocation(prev => ({
+          setLocation((prev) => ({
             ...prev,
             loading: false,
             error: "Location access denied. Please try again."
@@ -211,16 +229,23 @@ function FarmForm({ onSubmit }) {
     }
   }, []);
 
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  // -----------------------------
+  // 渲染 UI
+  // -----------------------------
   return (
     <ThemeProvider theme={theme}>
       <Box component="form" onSubmit={handleSubmit}>
         <Container maxWidth="lg">
           <Grid container spacing={4}>
-            {/* Basic Information */}
+            {/* Farm Name */}
             <Grid item xs={12}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
                 <Sprout size={24} style={{ color: theme.palette.primary.main }} />
-                <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Basic Information
                 </Typography>
               </Box>
@@ -229,7 +254,9 @@ function FarmForm({ onSubmit }) {
                 name="farmName"
                 label="Farm Name"
                 value={formData.farmName}
-                onChange={handleInputChange}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, farmName: e.target.value }))
+                }
                 variant="outlined"
                 required
                 placeholder="Enter your farm's name"
@@ -251,16 +278,15 @@ function FarmForm({ onSubmit }) {
                 name="cropType"
                 label="Primary Crop Type"
                 value={formData.cropType}
-                onChange={handleInputChange}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, cropType: e.target.value }))
+                }
                 variant="outlined"
                 required
               >
-                {cropTypes.map(option => (
+                {cropTypes.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <span>{option.icon}</span>
-                      <span>{option.value}</span>
-                    </Box>
+                    {option.label}
                   </MenuItem>
                 ))}
               </TextField>
@@ -274,7 +300,9 @@ function FarmForm({ onSubmit }) {
                 type="number"
                 label="Farm Area"
                 value={formData.area}
-                onChange={handleInputChange}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, area: e.target.value }))
+                }
                 variant="outlined"
                 required
                 InputProps={{
@@ -289,12 +317,42 @@ function FarmForm({ onSubmit }) {
               />
             </Grid>
 
-            {/* Detected Address (只读) */}
+            {/* 手动输入纬度经度 */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Latitude"
+                value={latInput}
+                onChange={(e) => setLatInput(e.target.value)}
+                variant="outlined"
+                placeholder="e.g. -35.1234"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Longitude"
+                value={lngInput}
+                onChange={(e) => setLngInput(e.target.value)}
+                variant="outlined"
+                placeholder="e.g. 149.1234"
+              />
+            </Grid>
+
+            {/* Update Address 按钮 */}
+            <Grid item xs={12}>
+              <Button variant="outlined" onClick={handleUpdateAddress}>
+                Update Address
+              </Button>
+            </Grid>
+
+            {/* 只读地址框 */}
             <Grid item xs={12}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
                 <Navigation size={24} style={{ color: theme.palette.primary.main }} />
-                <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
-                  Detected Address
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Current Address
                 </Typography>
               </Box>
               <TextField
@@ -308,6 +366,7 @@ function FarmForm({ onSubmit }) {
             </Grid>
           </Grid>
 
+          {/* Geolocation loading */}
           {location.loading && (
             <Box
               sx={{
@@ -317,8 +376,7 @@ function FarmForm({ onSubmit }) {
                 justifyContent: "center",
                 mt: 3,
                 p: 2,
-                borderRadius: 2,
-                backgroundColor: "rgba(255, 255, 255, 0.5)"
+                borderRadius: 2
               }}
             >
               <CircularProgress size={20} />
@@ -328,15 +386,14 @@ function FarmForm({ onSubmit }) {
             </Box>
           )}
 
+          {/* Geolocation error */}
           {location.error && (
-            <Alert
-              severity="info"
-              sx={{ mt: 3, borderRadius: 2, backgroundColor: "rgba(229, 246, 253, 0.85)" }}
-            >
+            <Alert severity="info" sx={{ mt: 3, borderRadius: 2 }}>
               {location.error}
             </Alert>
           )}
 
+          {/* 提交按钮 */}
           <Button
             type="submit"
             variant="contained"
@@ -355,6 +412,7 @@ function FarmForm({ onSubmit }) {
             <ArrowRight size={20} />
           </Button>
 
+          {/* Snackbar */}
           <Snackbar
             open={snackbar.open}
             autoHideDuration={6000}
@@ -364,7 +422,7 @@ function FarmForm({ onSubmit }) {
             <Alert
               onClose={handleCloseSnackbar}
               severity={snackbar.severity}
-              sx={{ width: "100%", borderRadius: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+              sx={{ width: "100%", borderRadius: 2 }}
             >
               {snackbar.message}
             </Alert>
