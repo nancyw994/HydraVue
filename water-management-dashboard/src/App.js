@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -100,7 +100,59 @@ function App() {
   const [advice, setAdvice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // 用于存储天气数据
+  const [weather, setWeather] = useState({
+    temperature: null,
+    humidity: null,
+    rainfall: null
+  });
 
+  // 初始通过定位更新天气（可选）
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          fetch(`https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${latitude},${longitude}`)
+            .then(response => response.json())
+            .then(data => {
+              if(data.current) {
+                setWeather({
+                  temperature: data.current.temp_c,
+                  humidity: data.current.humidity,
+                  rainfall: data.current.precip_mm
+                });
+              }
+            })
+            .catch(err => {
+              console.error("Weather API error:", err);
+            });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+        }
+      );
+    }
+  }, []);
+
+  // 更新天气的函数，根据传入的地址字符串查询天气
+  const updateWeatherByAddress = async (address) => {
+    try {
+      const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`);
+      const data = await response.json();
+      if (data.current) {
+        setWeather({
+          temperature: data.current.temp_c,
+          humidity: data.current.humidity,
+          rainfall: data.current.precip_mm
+        });
+      }
+    } catch (err) {
+      console.error("Error updating weather:", err);
+    }
+  };
+
+  // 当点击 Complete Registration 时，除了调用后端获取建议，还更新天气信息
   const handleFormSubmit = async (farmData) => {
     setLoading(true);
     setError(null);
@@ -118,6 +170,9 @@ function App() {
 
       const data = await response.json();
       setAdvice(data.advice);
+
+      // 使用用户输入的地址更新天气信息
+      await updateWeatherByAddress(farmData.address);
     } catch (err) {
       console.error("Backend call failed:", err);
       setError("Unable to generate irrigation advice. Please try again.");
@@ -168,7 +223,7 @@ function App() {
         </Box>
 
         {/* Main Content */}
-        <Container maxWidth="lg" sx={{ py: 6, position: 'relative' }}>
+        <Container maxWidth="lg" sx={{ py: 2, position: 'relative' }}>
           <Grid container spacing={4}>
             {/* Left Column - Form */}
             <Grid item xs={12} md={7}>
@@ -214,7 +269,7 @@ function App() {
                             Temperature
                           </Typography>
                           <Typography variant="h6" sx={{ color: '#2C4D47' }}>
-                            24°C
+                            {weather.temperature !== null ? `${weather.temperature}°C` : "N/A"}
                           </Typography>
                         </Stack>
                       </Grid>
@@ -225,7 +280,7 @@ function App() {
                             Rainfall
                           </Typography>
                           <Typography variant="h6" sx={{ color: '#2C4D47' }}>
-                            65%
+                            {weather.rainfall !== null ? `${weather.rainfall} mm` : "N/A"}
                           </Typography>
                         </Stack>
                       </Grid>
@@ -233,10 +288,10 @@ function App() {
                         <Stack alignItems="center" spacing={1}>
                           <Sprout style={{ color: '#62958D' }} size={28} />
                           <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
-                            Growth
+                            Humidity
                           </Typography>
                           <Typography variant="h6" sx={{ color: '#2C4D47' }}>
-                            Optimal
+                            {weather.humidity !== null ? `${weather.humidity}%` : "N/A"}
                           </Typography>
                         </Stack>
                       </Grid>

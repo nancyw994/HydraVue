@@ -15,7 +15,10 @@ import {
   ThemeProvider,
   createTheme,
   InputAdornment,
-  Divider
+  Divider,
+  List,
+  ListItem,
+  ListItemText
 } from "@mui/material";
 import { 
   MapPin, 
@@ -86,13 +89,122 @@ const theme = createTheme({
 });
 
 const cropTypes = [
-  { value: "Vegetables", icon: "🥬" },
-  { value: "Fruits", icon: "🍎" },
-  { value: "Herbs", icon: "🌿" },
-  { value: "Flowers", icon: "🌸" },
-  { value: "Mixed Produce", icon: "🌾" },
-  { value: "Other", icon: "📦" }
+  { value: "Wheat", label: "Wheat" },
+  { value: "Corn", label: "Corn" },
+  { value: "Rice", label: "Rice" },
+  { value: "Soybean", label: "Soybean" },
+  { value: "Cotton", label: "Cotton" },
+  { value: "Potato", label: "Potato" },
+  { value: "Tomato", label: "Tomato" },
+  { value: "Cucumber", label: "Cucumber" },
+  { value: "Sugarcane", label: "Sugarcane" },
+  { value: "Rapeseed", label: "Rapeseed" },
+  { value: "ChiliPepper", label: "Chili Pepper" },
+  { value: "Spinach", label: "Spinach" }
 ];
+
+// 地址自动补全组件（利用 Nominatim 搜索 API）
+function AddressAutocomplete({ initialValue, onSelect }) {
+  const [query, setQuery] = useState(initialValue || "");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (query.length < 3) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    const controller = new AbortController();
+    fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
+      { signal: controller.signal }
+    )
+      .then(response => response.json())
+      .then(data => {
+        setResults(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [query]);
+
+  // 格式化地址：生成 "house_number road, suburb, city, state, postcode, country" 格式的地址
+  const formatAddress = (addressData) => {
+    const { house_number, road, suburb, city, state, postcode, country } =
+      addressData.address || {};
+    return [
+      house_number && road ? `${house_number} ${road}` : road,
+      suburb,
+      city,
+      state,
+      postcode,
+      country
+    ]
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  return (
+    <Box sx={{ position: "relative" }}>
+      <TextField
+        fullWidth
+        label="Enter full address"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        variant="outlined"
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <MapPin size={20} style={{ color: theme.palette.text.secondary }} />
+            </InputAdornment>
+          )
+        }}
+      />
+      {loading && (
+        <CircularProgress
+          size={24}
+          sx={{ position: "absolute", top: "50%", right: 16, marginTop: "-12px" }}
+        />
+      )}
+      {results.length > 0 && (
+        <List
+          sx={{
+            position: "absolute",
+            zIndex: 1000,
+            width: "100%",
+            bgcolor: "background.paper",
+            maxHeight: 200,
+            overflowY: "auto",
+            border: "1px solid #ddd",
+            borderRadius: 1,
+            mt: 1
+          }}
+        >
+          {results.map((result) => (
+            <ListItem
+              button
+              key={result.place_id}
+              onClick={() => {
+                const formatted = formatAddress(result);
+                setQuery(formatted);
+                onSelect(formatted);
+                setResults([]);
+              }}
+            >
+              <ListItemText primary={result.display_name} />
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Box>
+  );
+}
 
 function FarmForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -109,26 +221,59 @@ function FarmForm({ onSubmit }) {
     error: null
   });
 
+  // 追踪地址是否被用户手动修改，防止自动覆盖
+  const [addressEdited, setAddressEdited] = useState(false);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  // 根据地址调用 WeatherAPI 获取天气数据
+  const updateWeather = async (address) => {
+    try {
+      const response = await fetch(
+        `https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`
+      );
+      const data = await response.json();
+      if (data.current) {
+        return {
+          temperature: data.current.temp_c,
+          humidity: data.current.humidity,
+          rainfall: data.current.precip_mm
+        };
+      }
+    } catch (error) {
+      console.error("Error updating weather:", error);
+    }
+    return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "address") {
+      setAddressEdited(true);
+      setFormData(prev => ({ ...prev, address: value }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  // 每次点击 Complete Registration 时，先更新天气再提交数据
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    // 根据当前地址更新天气
+    const weatherData = await updateWeather(formData.address);
+    // 将 farmData、定位信息与天气数据一起传递出去
     onSubmit({
       ...formData,
       latitude: location.latitude,
-      longitude: location.longitude
+      longitude: location.longitude,
+      weather: weatherData
     });
     setSnackbar({
       open: true,
@@ -141,6 +286,7 @@ function FarmForm({ onSubmit }) {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  // 自动定位获取地址（仅当用户未手动修改地址时）
   useEffect(() => {
     if (navigator.geolocation) {
       setLocation(prev => ({ ...prev, loading: true }));
@@ -154,13 +300,22 @@ function FarmForm({ onSubmit }) {
             loading: false
           }));
 
-          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
-            .then((response) => response.json())
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`)
+            .then(response => response.json())
             .then((data) => {
-              if (data.display_name) {
+              if (data.display_name && !addressEdited) {
+                const { house_number, road, suburb, city, state, postcode, country } = data.address || {};
+                const formattedAddress = [
+                  house_number && road ? `${house_number} ${road}` : road,
+                  suburb,
+                  city,
+                  state,
+                  postcode,
+                  country
+                ].filter(Boolean).join(", ");
                 setFormData(prev => ({
                   ...prev,
-                  address: data.display_name
+                  address: formattedAddress
                 }));
                 setSnackbar({
                   open: true,
@@ -185,28 +340,16 @@ function FarmForm({ onSubmit }) {
         }
       );
     }
-  }, []);
+  }, [addressEdited]);
 
   return (
     <ThemeProvider theme={theme}>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={4}>
           <Grid item xs={12}>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 2, 
-              mb: 2 
-            }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Sprout size={24} style={{ color: theme.palette.primary.main }} />
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: theme.palette.text.primary,
-                  fontWeight: 600,
-                  fontFamily: 'Quicksand'
-                }}
-              >
+              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontFamily: 'Quicksand' }}>
                 Basic Information
               </Typography>
             </Box>
@@ -228,7 +371,6 @@ function FarmForm({ onSubmit }) {
               }}
             />
           </Grid>
-
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -250,7 +392,6 @@ function FarmForm({ onSubmit }) {
               ))}
             </TextField>
           </Grid>
-
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -264,12 +405,7 @@ function FarmForm({ onSubmit }) {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Typography 
-                      sx={{ 
-                        color: theme.palette.text.secondary,
-                        fontWeight: 500 
-                      }}
-                    >
+                    <Typography sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
                       acres
                     </Typography>
                   </InputAdornment>
@@ -277,116 +413,46 @@ function FarmForm({ onSubmit }) {
               }}
             />
           </Grid>
-
           <Grid item xs={12}>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 2, 
-              mb: 1 
-            }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
               <Navigation size={24} style={{ color: theme.palette.primary.main }} />
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: theme.palette.text.primary,
-                  fontWeight: 600,
-                  fontFamily: 'Quicksand'
-                }}
-              >
+              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontFamily: 'Quicksand' }}>
                 Location Details
               </Typography>
             </Box>
-            <TextField
-              fullWidth
-              name="address"
-              label="Farm Address"
-              value={formData.address}
-              onChange={handleInputChange}
-              variant="outlined"
-              required
-              placeholder="Enter full address"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MapPin size={20} style={{ color: theme.palette.text.secondary }} />
-                  </InputAdornment>
-                ),
+            {/* 使用 AddressAutocomplete 组件，生成格式统一的地址，便于后续调用 WeatherAPI */}
+            <AddressAutocomplete
+              initialValue={formData.address}
+              onSelect={(formattedAddress) => {
+                setFormData(prev => ({ ...prev, address: formattedAddress }));
+                setAddressEdited(true);
               }}
             />
           </Grid>
         </Grid>
 
         {location.loading && (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2,
-            justifyContent: 'center', 
-            mt: 3,
-            p: 2,
-            borderRadius: 2,
-            backgroundColor: 'rgba(255, 255, 255, 0.5)'
-          }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', mt: 3, p: 2, borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
             <CircularProgress size={20} />
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: theme.palette.text.secondary,
-                fontWeight: 500
-              }}
-            >
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
               Detecting your location...
             </Typography>
           </Box>
         )}
 
         {location.error && (
-          <Alert 
-            severity="info" 
-            sx={{ 
-              mt: 3,
-              borderRadius: 2,
-              backgroundColor: 'rgba(229, 246, 253, 0.85)'
-            }}
-          >
+          <Alert severity="info" sx={{ mt: 3, borderRadius: 2, backgroundColor: 'rgba(229, 246, 253, 0.85)' }}>
             {location.error}
           </Alert>
         )}
 
-        <Button 
-          type="submit"
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
-          sx={{ 
-            mt: 4,
-            height: '50px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
+        <Button type="submit" variant="contained" color="primary" size="large" fullWidth sx={{ mt: 4, height: '50px', display: 'flex', alignItems: 'center', gap: 1 }}>
           Complete Registration
           <ArrowRight size={20} />
         </Button>
 
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={handleCloseSnackbar} 
-            severity={snackbar.severity}
-            sx={{ 
-              width: '100%',
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-            }}
-          >
+        <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             {snackbar.message}
           </Alert>
         </Snackbar>
