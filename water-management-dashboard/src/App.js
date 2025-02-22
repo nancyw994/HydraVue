@@ -12,95 +12,92 @@ import {
   Stack,
   Grid
 } from "@mui/material";
-import { Sprout, CloudRain, Thermometer } from 'lucide-react';
+import { Sprout, CloudRain, Thermometer } from "lucide-react";
 import FarmForm from "./Components/FarmForm";
 import "./App.css";
-
-// 导入 Google Fonts CSS in public/index.html:
-// <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
 
 const theme = createTheme({
   typography: {
     fontFamily: [
-      'Quicksand',
-      '-apple-system',
-      'BlinkMacSystemFont',
-      'Arial',
-      'sans-serif'
-    ].join(','),
+      "Quicksand",
+      "-apple-system",
+      "BlinkMacSystemFont",
+      "Arial",
+      "sans-serif"
+    ].join(","),
     h1: {
-      fontSize: '2.5rem',
+      fontSize: "2.5rem",
       fontWeight: 600,
-      letterSpacing: '0.02em',
-      fontFamily: 'Quicksand',
+      letterSpacing: "0.02em",
+      fontFamily: "Quicksand"
     },
     h2: {
-      fontSize: '1.75rem',
+      fontSize: "1.75rem",
       fontWeight: 600,
-      letterSpacing: '0.01em',
-      fontFamily: 'Quicksand',
+      letterSpacing: "0.01em",
+      fontFamily: "Quicksand"
     },
     h6: {
-      fontFamily: 'Quicksand',
-      fontWeight: 600,
+      fontFamily: "Quicksand",
+      fontWeight: 600
     },
     subtitle1: {
-      fontSize: '1.1rem',
+      fontSize: "1.1rem",
       lineHeight: 1.5,
-      letterSpacing: '0.01em',
-      fontWeight: 500,
+      letterSpacing: "0.01em",
+      fontWeight: 500
     }
   },
   palette: {
     primary: {
-      main: '#62958D',
-      light: '#89AEA8',
-      dark: '#4B746E',
+      main: "#62958D",
+      light: "#89AEA8",
+      dark: "#4B746E"
     },
     secondary: {
-      main: '#A3C4BC',
-      light: '#C2DAD4',
-      dark: '#7FA199',
+      main: "#A3C4BC",
+      light: "#C2DAD4",
+      dark: "#7FA199"
     },
     text: {
-      primary: '#2C4D47',
-      secondary: '#5C7972',
+      primary: "#2C4D47",
+      secondary: "#5C7972"
     }
   },
   components: {
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '16px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+          borderRadius: "16px",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)"
         }
       }
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none',
-          borderRadius: '8px',
+          textTransform: "none",
+          borderRadius: "8px",
           fontWeight: 500,
-          fontFamily: 'Quicksand',
+          fontFamily: "Quicksand"
         }
       }
     },
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: '12px',
+          borderRadius: "12px"
         }
       }
     }
   }
 });
 
+// App.js
 function App() {
   const [advice, setAdvice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  // 用于存储天气数据
   const [weather, setWeather] = useState({
     temperature: null,
     humidity: null,
@@ -135,7 +132,7 @@ function App() {
     }
   }, []);
 
-  // 更新天气的函数，根据传入的地址字符串查询天气
+  // 根据地址更新天气信息
   const updateWeatherByAddress = async (address) => {
     try {
       const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=358a237b0c7e4f56af130830252202&q=${encodeURIComponent(address)}`);
@@ -152,18 +149,15 @@ function App() {
     }
   };
 
-  // 模拟提交时生成 dummy irrigation advice
+  // 修改 handleFormSubmit，使用 farmData.waterAdvice（由 FarmForm 生成的 AI 建议）
   const handleFormSubmit = async (farmData) => {
     setLoading(true);
     setError(null);
     
     try {
-      // 模拟延迟1秒，模拟获取后端建议
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const dummyAdvice = "Your irrigation system is optimized.";
-      setAdvice(dummyAdvice);
-
-      // 使用用户输入的地址更新天气信息
+      // 这里直接使用 FarmForm 中生成的 waterAdvice
+      setAdvice(farmData.waterAdvice || "No advice provided.");
+      // 更新天气信息（可选）
       await updateWeatherByAddress(farmData.address);
     } catch (err) {
       console.error("Backend call failed:", err);
@@ -297,18 +291,52 @@ function App() {
                     background: 'linear-gradient(135deg, #62958D 0%, #89AEA8 100%)',
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(163, 196, 188, 0.2)',
+                    maxHeight: '400px', // Set maximum height
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" gutterBottom sx={{ color: 'white' }}>
+                    <CardContent sx={{ 
+                      p: 3,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden'
+                    }}>
+                      <Typography variant="h6" gutterBottom sx={{ 
+                        color: 'white',
+                        mb: 2,
+                        fontWeight: 600
+                      }}>
                         Smart Irrigation Advice
                       </Typography>
                       <Box sx={{ 
-                        mt: 2,
-                        p: 2,
+                        flex: 1,
+                        overflow: 'auto',
                         borderRadius: 2,
                         backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                        p: 2.5,
+                        '&::-webkit-scrollbar': {
+                          width: '8px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                          background: 'rgba(255, 255, 255, 0.3)',
+                          borderRadius: '4px',
+                          '&:hover': {
+                            background: 'rgba(255, 255, 255, 0.4)',
+                          },
+                        },
                       }}>
-                        <Typography sx={{ color: 'white', fontWeight: 500 }}>
+                        <Typography sx={{ 
+                          color: 'white',
+                          fontWeight: 500,
+                          lineHeight: 1.6,
+                          letterSpacing: '0.015em',
+                          whiteSpace: 'pre-wrap'
+                        }}>
                           {advice}
                         </Typography>
                       </Box>

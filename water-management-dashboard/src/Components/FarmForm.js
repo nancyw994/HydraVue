@@ -26,26 +26,20 @@ const theme = createTheme({
   // 你的主题配置...
 });
 
-const cropTypes = [
-  { value: "Wheat", label: "Wheat" },
-  { value: "Corn", label: "Corn" }
-  // ...其他作物类型
-];
-
-const GEMINI_API_KEY = "AIzaSyCESYMiKa5rTQLP2h1A8fDWUkQH73RRFzk";
+// 原先的 cropTypes 数组已不再需要，可以删除或保留备用
 
 // 使用 Google Gemini API 生成用水建议
 const fetchWaterAdviceGemini = async (formData, safeWeatherData, location) => {
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI("AIzaSyCESYMiKa5rTQLP2h1A8fDWUkQH73RRFzk");
   const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
   const promptText = `You are an expert agricultural irrigation consultant specialized in sustainable farming. Based on the following farm details:
   - Address: ${formData.address}
   - Crop type: ${formData.cropType}
-  - Farm area: ${formData.area} acres
+  - Soil moisture: ${formData.soilMoisture}% 
   - Location coordinates: (${location.latitude}, ${location.longitude})
   - Current weather conditions: Temperature ${safeWeatherData.temperature}°C, Humidity ${safeWeatherData.humidity}%, Rainfall ${safeWeatherData.rainfall} 
-  Please provide a detailed recommendation(Give a specific number based on pervious dataset) for the daily water usage per acre in liters. Explain your reasoning briefly, including factors such as crop water requirements, weather conditions, and local climate considerations. Give your answer in english
+  Please provide a detailed recommendation (Give a specific number based on previous dataset) for the daily water usage per acre in liters. Explain your reasoning briefly, including factors such as crop water requirements, weather conditions, and local climate considerations. Give your answer in English.
 `;
   console.log(promptText);
   try {
@@ -82,7 +76,7 @@ function FarmForm({ onSubmit }) {
   const [formData, setFormData] = useState({
     farmName: "",
     cropType: "",
-    area: "",
+    soilMoisture: "",
     address: ""
   });
   const [location, setLocation] = useState({
@@ -124,7 +118,7 @@ function FarmForm({ onSubmit }) {
     const farmData = {
       farmName: formData.farmName,
       cropType: formData.cropType,
-      area: parseFloat(formData.area),
+      soilMoisture: parseFloat(formData.soilMoisture),
       address: formData.address,
       location: {
         latitude: location.latitude,
@@ -243,37 +237,28 @@ function FarmForm({ onSubmit }) {
               />
             </Grid>
 
-            {/* Crop Type */}
+            {/* Crop Type 修改为字符串输入 */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                select
                 name="cropType"
-                label="Primary Crop Type"
+                label="Crop Type"
                 value={formData.cropType}
                 onChange={handleInputChange}
                 variant="outlined"
                 required
-              >
-                {cropTypes.map(option => (
-                  <MenuItem key={option.value} value={option.value}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <span>{option.icon}</span>
-                      <span>{option.value}</span>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </TextField>
+                placeholder="Enter the primary crop type"
+              />
             </Grid>
 
-            {/* Farm Area */}
+            {/* 土壤湿度（百分比） */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                name="area"
+                name="soilMoisture"
                 type="number"
-                label="Farm Area"
-                value={formData.area}
+                label="Soil Moisture"
+                value={formData.soilMoisture}
                 onChange={handleInputChange}
                 variant="outlined"
                 required
@@ -281,7 +266,7 @@ function FarmForm({ onSubmit }) {
                   endAdornment: (
                     <InputAdornment position="end">
                       <Typography sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                        acres
+                        %
                       </Typography>
                     </InputAdornment>
                   )
