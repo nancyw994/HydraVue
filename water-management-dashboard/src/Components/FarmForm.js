@@ -85,22 +85,25 @@ function FarmForm({ onSubmit }) {
   // 根据经纬度查询地址（使用 thingproxy 代理调用 Nominatim 反向地理编码 API）
   const reverseGeocode = async (lat, lng) => {
     try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${nominatimUrl}`;
-      const response = await fetch(proxyUrl);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const data = await response.json();
-      console.log("Reverse geocode data:", data);
-      if (data.display_name) {
-        return data.display_name;
-      }
+        const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+        const response = await fetch(nominatimUrl);
+
+        if (!response.ok) {
+            throw new Error("Network response was not ok");
+        }
+
+        const data = await response.json();
+        console.log("📍 反向地理编码结果:", data); // ✅ 确保 API 返回数据
+
+        if (data.display_name) {
+            return data.display_name;
+        }
     } catch (error) {
-      console.error("Reverse geocode error:", error);
+        console.error("❌ 反向地理编码失败:", error);
     }
     return "";
-  };
+};
+
 
   // 处理手动输入经纬度时，按下 Enter 键
   const handleLatLngKeyDown = async (e) => {
