@@ -152,24 +152,16 @@ function App() {
     }
   };
 
-  // 当点击 Complete Registration 时，除了调用后端获取建议，还更新天气信息
+  // 模拟提交时生成 dummy irrigation advice
   const handleFormSubmit = async (farmData) => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('https://<your-cloud-function-url>/getIrrigationAdvice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(farmData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get irrigation advice');
-      }
-
-      const data = await response.json();
-      setAdvice(data.advice);
+      // 模拟延迟1秒，模拟获取后端建议
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const dummyAdvice = "Your irrigation system is optimized.";
+      setAdvice(dummyAdvice);
 
       // 使用用户输入的地址更新天气信息
       await updateWeatherByAddress(farmData.address);
