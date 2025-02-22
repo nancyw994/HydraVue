@@ -113,37 +113,25 @@ function App() {
           }}
         >
           <Container maxWidth="lg">
-            <Stack direction="row" alignItems="center" spacing={2} justifyContent="space-between">
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Sprout size={32} color="#62958D" />
-                <Typography variant="h1" sx={{ 
-                  color: '#2C4D47',
-                  textShadow: '0 1px 2px rgba(255,255,255,0.2)'
-                }}>
-                  Smart Farm Assistant
-                </Typography>
-              </Stack>
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`bg-[#62958D] hover:bg-[#4B746E] text-white rounded-full p-2 flex items-center gap-2 transition-all duration-200 shadow-md ${
-                  isOpen ? 'bg-[#4B746E]' : ''
-                }`}
+            <Stack alignItems="center" spacing={1}>
+              <Sprout size={32} color="#62958D" />
+              <Typography variant="h1" sx={{ 
+                color: '#2C4D47',
+                textShadow: '0 1px 2px rgba(255,255,255,0.2)',
+                textAlign: 'center'
+              }}>
+                Smart Farm Assistant
+              </Typography>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  color: '#446B64',
+                  opacity: 0.9
+                }}
               >
-                <MessageSquare size={20} />
-                <span className="text-sm font-medium">Chat with AI</span>
-              </button>
+                Sustainable farming through intelligent irrigation management
+              </Typography>
             </Stack>
-            <Typography 
-              variant="subtitle1" 
-              align="center" 
-              sx={{ 
-                mt: 2, 
-                color: '#446B64',
-                opacity: 0.9
-              }}
-            >
-              Sustainable farming through intelligent irrigation management
-            </Typography>
           </Container>
         </Box>
 

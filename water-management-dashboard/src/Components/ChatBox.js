@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
-import { MessageSquare } from 'lucide-react';
+import {
+  TextField,
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Paper,
+  IconButton,
+  Stack
+} from "@mui/material";
+import { Send, MessageSquare } from 'lucide-react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const ChatBox = () => {
   const [messages, setMessages] = useState([
-    {
-      type: 'system',
-      text: 'You are a highly experienced irrigation AI. Provide short, practical advice...'
-    },
     {
       type: 'user',
       text: 'hi'
     },
     {
       type: 'assistant',
-      text: "Sorry, I couldn't generate a response."
+      text: "Hi! I am an Irrigation AI. I am really happy to provide short, practical advice with you!"
     }
   ]);
   const [input, setInput] = useState('');
@@ -58,68 +64,157 @@ const ChatBox = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-[#A3C4BC]"
-         style={{
-           background: 'rgba(255, 255, 255, 0.95)',
-           backdropFilter: 'blur(8px)',
-         }}>
-      {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b border-[#A3C4BC]">
-        <MessageSquare size={20} className="text-[#62958D]" />
-        <h2 className="text-lg font-semibold text-[#2C4D47]">Chat with AI</h2>
-      </div>
+    <Card sx={{ 
+      width: '100%',
+      background: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(8px)',
+      border: '1px solid rgba(163, 196, 188, 0.2)',
+      borderRadius: 2,
+    }}>
+      <CardContent sx={{ p: 2.5 }}>
+        {/* 标题 */}
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <MessageSquare size={20} color="#62958D" />
+          <Typography variant="h6" sx={{ color: '#2C4D47', fontSize: '1.1rem' }}>
+            Chat with AI
+          </Typography>
+        </Stack>
 
-      {/* Messages */}
-      <div className="max-h-[400px] overflow-y-auto px-4">
-        <div className="text-right mb-4">
-          <span className="text-xs text-[#5C7972] mb-1 block">SYSTEM</span>
-          <p className="text-sm text-[#2C4D47]">
-            You are a highly experienced irrigation AI. Provide short, practical advice...
-          </p>
-        </div>
+        {/* 消息区域 */}
+        <Box sx={{ 
+          height: 220,
+          overflow: 'auto',
+          mb: 2,
+          pr: 1,
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#A3C4BC',
+            borderRadius: '3px',
+          },
+        }}>
+          {messages.map((message, index) => (
+            <Box key={index} sx={{ mb: 1.5 }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#5C7972',
+                  display: 'block',
+                  mb: 0.5,
+                  fontWeight: 500,
+                  fontSize: '0.7rem'
+                }}
+              >
+                {message.type.toUpperCase()}
+              </Typography>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  py: 1.5,
+                  px: 2,
+                  borderRadius: 1.5,
+                  bgcolor: message.type === 'user' ? '#62958D' : 'rgba(163, 196, 188, 0.1)',
+                  color: message.type === 'user' ? 'white' : '#2C4D47'
+                }}
+              >
+                <Typography variant="body2" sx={{ 
+                  fontSize: '0.875rem',
+                  lineHeight: 1.5
+                }}>
+                  {message.text}
+                </Typography>
+              </Paper>
+            </Box>
+          ))}
 
-        <div className="mb-4">
-          <span className="text-xs text-[#5C7972] mb-1 block">USER</span>
-          <p className="text-sm text-[#2C4D47]">
-            hi
-          </p>
-        </div>
+          {isLoading && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1, 
+              color: '#5C7972',
+              p: 1.5
+            }}>
+              <div className="loading-dots">
+                <span>●</span>
+                <span>●</span>
+                <span>●</span>
+              </div>
+            </Box>
+          )}
+        </Box>
 
-        <div className="mb-4">
-          <span className="text-xs text-[#5C7972] mb-1 block">ASSISTANT</span>
-          <p className="text-sm text-[#2C4D47]">
-            Sorry, I couldn't generate a response.
-          </p>
-        </div>
-
-        {isLoading && (
-          <div className="flex items-center gap-2 text-[#5C7972] mb-4">
-            <div className="animate-spin h-4 w-4 border-2 border-[#62958D] border-t-transparent rounded-full"></div>
-            <span className="text-sm">Thinking...</span>
-          </div>
-        )}
-      </div>
-
-      {/* Input */}
-      <div className="p-4 border-t border-[#A3C4BC]">
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about irrigation..."
-            className="flex-1 px-4 py-2 text-sm bg-white border border-[#A3C4BC] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#62958D]"
-          />
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="bg-[#62958D] text-white px-6 py-2 rounded-lg hover:bg-[#4B746E] disabled:opacity-50 text-sm font-medium"
-          >
-            SEND
-          </button>
+        {/* 输入区域 */}
+        <form onSubmit={sendMessage}>
+          <Stack direction="row" spacing={1}>
+            <TextField
+              fullWidth
+              size="small"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about irrigation..."
+              disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderColor: '#A3C4BC',
+                  borderRadius: 1.5,
+                  '&:hover': {
+                    borderColor: '#62958D',
+                  },
+                  '&.Mui-focused': {
+                    borderColor: '#62958D',
+                  }
+                }
+              }}
+            />
+            <IconButton 
+              type="submit"
+              disabled={isLoading}
+              sx={{
+                bgcolor: '#62958D',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: '#4B746E',
+                },
+                '&.Mui-disabled': {
+                  bgcolor: '#A3C4BC',
+                },
+                borderRadius: 1.5,
+                width: 36,
+                height: 36,
+                minWidth: 36
+              }}
+            >
+              <Send size={18} />
+            </IconButton>
+          </Stack>
         </form>
-      </div>
-    </div>
+      </CardContent>
+
+      <style>{`
+        .loading-dots {
+          display: flex;
+          gap: 4px;
+        }
+        .loading-dots span {
+          font-size: 12px;
+          animation: dots 1.4s infinite;
+          animation-fill-mode: both;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dots {
+          0% { opacity: 0.2; }
+          20% { opacity: 1; }
+          100% { opacity: 0.2; }
+        }
+      `}</style>
+    </Card>
   );
 };
 
