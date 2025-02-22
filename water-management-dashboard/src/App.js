@@ -9,59 +9,70 @@ import {
   CardContent,
   Alert,
   LinearProgress,
-  Divider,
   Stack,
-  Grid  // Added Grid import
+  Grid
 } from "@mui/material";
-import { Droplet, Leaf, Sun } from 'lucide-react';
+import { Sprout, CloudRain, Thermometer } from 'lucide-react';
 import FarmForm from "./Components/FarmForm";
 import "./App.css";
 
+// 导入 Google Fonts CSS in public/index.html:
+// <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+
 const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#0EA5E9',
-      light: '#38BDF8',
-      dark: '#0369A1',
-    },
-    secondary: {
-      main: '#22C55E',
-      light: '#4ADE80',
-      dark: '#15803D',
-    },
-    background: {
-      default: '#FFFFFF',
-      paper: '#F8FAFC',
-    },
-    text: {
-      primary: '#0F172A',
-      secondary: '#64748B',
-    }
-  },
   typography: {
+    fontFamily: [
+      'Quicksand',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Arial',
+      'sans-serif'
+    ].join(','),
     h1: {
-      fontSize: '2rem',
+      fontSize: '2.5rem',
       fontWeight: 600,
-      lineHeight: 1.2,
+      letterSpacing: '0.02em',
+      fontFamily: 'Quicksand',
     },
     h2: {
-      fontSize: '1.5rem',
+      fontSize: '1.75rem',
       fontWeight: 600,
-      lineHeight: 1.3,
+      letterSpacing: '0.01em',
+      fontFamily: 'Quicksand',
+    },
+    h6: {
+      fontFamily: 'Quicksand',
+      fontWeight: 600,
     },
     subtitle1: {
-      fontSize: '1rem',
+      fontSize: '1.1rem',
       lineHeight: 1.5,
-      color: '#64748B',
+      letterSpacing: '0.01em',
+      fontWeight: 500,
+    }
+  },
+  palette: {
+    primary: {
+      main: '#62958D',
+      light: '#89AEA8',
+      dark: '#4B746E',
+    },
+    secondary: {
+      main: '#A3C4BC',
+      light: '#C2DAD4',
+      dark: '#7FA199',
+    },
+    text: {
+      primary: '#2C4D47',
+      secondary: '#5C7972',
     }
   },
   components: {
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '12px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+          borderRadius: '16px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
         }
       }
     },
@@ -71,6 +82,14 @@ const theme = createTheme({
           textTransform: 'none',
           borderRadius: '8px',
           fontWeight: 500,
+          fontFamily: 'Quicksand',
+        }
+      }
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: '12px',
         }
       }
     }
@@ -93,11 +112,14 @@ function App() {
         body: JSON.stringify(farmData)
       });
 
-      if (!response.ok) throw new Error('Failed to get irrigation advice');
+      if (!response.ok) {
+        throw new Error('Failed to get irrigation advice');
+      }
+
       const data = await response.json();
       setAdvice(data.advice);
-    } catch (error) {
-      console.error("Backend call failed:", error);
+    } catch (err) {
+      console.error("Backend call failed:", err);
       setError("Unable to generate irrigation advice. Please try again.");
     } finally {
       setLoading(false);
@@ -108,40 +130,61 @@ function App() {
     <ThemeProvider theme={theme}>
       <Box sx={{ 
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)'
+        background: 'linear-gradient(to top, #62958D -5%, #A3C4BC 40%, #E8F3F1 100%)',
+        position: 'relative',
       }}>
         {/* Header Section */}
         <Box 
           sx={{ 
-            pt: 3, 
-            pb: 2,
-            borderBottom: '1px solid #E2E8F0'
+            pt: 4, 
+            pb: 3,
+            position: 'relative',
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            backdropFilter: 'blur(8px)',
           }}
         >
           <Container maxWidth="lg">
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Droplet size={24} className="text-blue-500" />
-              <Typography variant="h1">
-                Smart Irrigation
+            <Stack direction="row" alignItems="center" spacing={2} justifyContent="center">
+              <Sprout size={32} style={{ color: '#62958D' }} />
+              <Typography variant="h1" sx={{ 
+                color: '#2C4D47',
+                textShadow: '0 1px 2px rgba(255,255,255,0.2)'
+              }}>
+                Smart Farm Assistant
               </Typography>
             </Stack>
+            <Typography 
+              variant="subtitle1" 
+              align="center" 
+              sx={{ 
+                mt: 2, 
+                color: '#446B64',
+                opacity: 0.9
+              }}
+            >
+              Sustainable farming through intelligent irrigation management
+            </Typography>
           </Container>
         </Box>
 
         {/* Main Content */}
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Grid container spacing={3}>
+        <Container maxWidth="lg" sx={{ py: 6, position: 'relative' }}>
+          <Grid container spacing={4}>
             {/* Left Column - Form */}
             <Grid item xs={12} md={7}>
-              <Card sx={{ height: '100%' }}>
-                <CardContent>
-                  <Stack spacing={3}>
+              <Card sx={{ 
+                background: 'rgba(255, 255, 255, 0.92)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(163, 196, 188, 0.2)',
+              }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Stack spacing={4}>
                     <Box>
-                      <Typography variant="h2" gutterBottom>
-                        Farm Details
+                      <Typography variant="h2" color="#2C4D47" gutterBottom>
+                        Your Farm Profile
                       </Typography>
-                      <Typography variant="subtitle1">
-                        Enter your farm information to get personalized irrigation advice
+                      <Typography variant="subtitle1" color="#5C7972">
+                        Let's optimize your irrigation system with smart technology
                       </Typography>
                     </Box>
                     <FarmForm onSubmit={handleFormSubmit} />
@@ -150,46 +193,50 @@ function App() {
               </Card>
             </Grid>
 
-            {/* Right Column - Results & Stats */}
+            {/* Right Column */}
             <Grid item xs={12} md={5}>
-              <Stack spacing={3}>
-                {/* Quick Stats */}
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
+              <Stack spacing={4}>
+                {/* Environmental Stats */}
+                <Card sx={{ 
+                  background: 'rgba(255, 255, 255, 0.92)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(163, 196, 188, 0.2)',
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom sx={{ color: '#2C4D47' }}>
                       Current Conditions
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={3} sx={{ mt: 1 }}>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <Sun className="text-amber-500" />
-                          <Typography variant="body2" color="text.secondary">
-                            Sunny
+                          <Thermometer style={{ color: '#62958D' }} size={28} />
+                          <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
+                            Temperature
                           </Typography>
-                          <Typography variant="h6">
+                          <Typography variant="h6" sx={{ color: '#2C4D47' }}>
                             24°C
                           </Typography>
                         </Stack>
                       </Grid>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <Droplet className="text-blue-500" />
-                          <Typography variant="body2" color="text.secondary">
-                            Humidity
+                          <CloudRain style={{ color: '#62958D' }} size={28} />
+                          <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
+                            Rainfall
                           </Typography>
-                          <Typography variant="h6">
+                          <Typography variant="h6" sx={{ color: '#2C4D47' }}>
                             65%
                           </Typography>
                         </Stack>
                       </Grid>
                       <Grid item xs={4}>
                         <Stack alignItems="center" spacing={1}>
-                          <Leaf className="text-green-500" />
-                          <Typography variant="body2" color="text.secondary">
-                            Soil
+                          <Sprout style={{ color: '#62958D' }} size={28} />
+                          <Typography variant="body2" sx={{ color: '#5C7972', fontWeight: 500 }}>
+                            Growth
                           </Typography>
-                          <Typography variant="h6">
-                            Moist
+                          <Typography variant="h6" sx={{ color: '#2C4D47' }}>
+                            Optimal
                           </Typography>
                         </Stack>
                       </Grid>
@@ -197,43 +244,68 @@ function App() {
                   </CardContent>
                 </Card>
 
-                {/* Advice Display */}
-                {loading && (
-                  <Card>
-                    <CardContent>
-                      <Stack spacing={2}>
-                        <Typography variant="h6">
-                          Generating Advice
+                {/* Advice Card */}
+                {advice && !loading && !error && (
+                  <Card sx={{ 
+                    background: 'linear-gradient(135deg, #62958D 0%, #89AEA8 100%)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(163, 196, 188, 0.2)',
+                  }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Typography variant="h6" gutterBottom sx={{ color: 'white' }}>
+                        Smart Irrigation Advice
+                      </Typography>
+                      <Box sx={{ 
+                        mt: 2,
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      }}>
+                        <Typography sx={{ color: 'white', fontWeight: 500 }}>
+                          {advice}
                         </Typography>
-                        <LinearProgress />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Loading State */}
+                {loading && (
+                  <Card sx={{ 
+                    background: 'rgba(255, 255, 255, 0.92)',
+                    backdropFilter: 'blur(8px)',
+                  }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Stack spacing={2}>
+                        <Typography variant="h6" sx={{ color: '#2C4D47' }}>
+                          Analyzing Farm Data
+                        </Typography>
+                        <LinearProgress 
+                          sx={{ 
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: '#62958D'
+                            }
+                          }} 
+                        />
                       </Stack>
                     </CardContent>
                   </Card>
                 )}
 
+                {/* Error State */}
                 {error && (
                   <Alert 
                     severity="error"
                     variant="outlined"
+                    sx={{ 
+                      borderRadius: 2,
+                      backdropFilter: 'blur(8px)',
+                      background: 'rgba(255, 255, 255, 0.92)',
+                      border: '1px solid rgba(163, 196, 188, 0.2)',
+                    }}
                   >
                     {error}
                   </Alert>
-                )}
-
-                {advice && !loading && !error && (
-                  <Card sx={{ 
-                    background: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
-                    color: 'white'
-                  }}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{ color: 'white' }}>
-                        Irrigation Recommendations
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: 'white' }}>
-                        {advice}
-                      </Typography>
-                    </CardContent>
-                  </Card>
                 )}
               </Stack>
             </Grid>

@@ -13,40 +13,88 @@ import {
   CircularProgress,
   Container,
   ThemeProvider,
-  createTheme
+  createTheme,
+  InputAdornment,
+  Divider
 } from "@mui/material";
 import { 
   MapPin, 
-  Warehouse
+  Warehouse,
+  Sprout,
+  Navigation,
+  ArrowRight
 } from 'lucide-react';
 
-// Custom theme configuration
 const theme = createTheme({
+  typography: {
+    fontFamily: [
+      'Quicksand',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Arial',
+      'sans-serif'
+    ].join(','),
+  },
   palette: {
     primary: {
-      main: '#2e7d32',
-      light: '#4caf50',
-      dark: '#1b5e20',
+      main: '#62958D',
+      light: '#89AEA8',
+      dark: '#4B746E',
     },
     secondary: {
-      main: '#f9a825',
-      light: '#fbc02d',
-      dark: '#f57f17',
+      main: '#A3C4BC',
+      light: '#C2DAD4',
+      dark: '#7FA199',
+    },
+    text: {
+      primary: '#2C4D47',
+      secondary: '#5C7972',
+    }
+  },
+  components: {
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 0 0 2px rgba(98, 149, 141, 0.2)',
+            }
+          }
+        }
+      }
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '12px',
+          padding: '12px 24px',
+          fontSize: '1rem',
+          textTransform: 'none',
+          fontWeight: 600,
+          fontFamily: 'Quicksand',
+        }
+      }
     }
   }
 });
 
 const cropTypes = [
-  "Vegetables",
-  "Fruits",
-  "Herbs",
-  "Flowers",
-  "Mixed Produce",
-  "Other"
+  { value: "Vegetables", icon: "🥬" },
+  { value: "Fruits", icon: "🍎" },
+  { value: "Herbs", icon: "🌿" },
+  { value: "Flowers", icon: "🌸" },
+  { value: "Mixed Produce", icon: "🌾" },
+  { value: "Other", icon: "📦" }
 ];
 
 function FarmForm({ onSubmit }) {
-  // Form data state
   const [formData, setFormData] = useState({
     farmName: "",
     cropType: "",
@@ -54,7 +102,6 @@ function FarmForm({ onSubmit }) {
     address: ""
   });
   
-  // Location state
   const [location, setLocation] = useState({
     latitude: null,
     longitude: null,
@@ -62,14 +109,12 @@ function FarmForm({ onSubmit }) {
     error: null
   });
 
-  // Snackbar state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -78,7 +123,6 @@ function FarmForm({ onSubmit }) {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
@@ -93,15 +137,10 @@ function FarmForm({ onSubmit }) {
     });
   };
 
-  // Handle snackbar close
   const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({
-      ...prev,
-      open: false
-    }));
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Get location on component mount
   useEffect(() => {
     if (navigator.geolocation) {
       setLocation(prev => ({ ...prev, loading: true }));
@@ -115,7 +154,6 @@ function FarmForm({ onSubmit }) {
             loading: false
           }));
 
-          // Reverse geocoding
           fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
             .then((response) => response.json())
             .then((data) => {
@@ -136,18 +174,13 @@ function FarmForm({ onSubmit }) {
                 ...prev,
                 error: "Failed to fetch address. Please enter manually."
               }));
-              setSnackbar({
-                open: true,
-                message: 'Failed to detect location. Please enter address manually.',
-                severity: 'error'
-              });
             });
         },
         (error) => {
           setLocation(prev => ({
             ...prev,
             loading: false,
-            error: "Location access denied. Please enter address manually."
+            error: "Location access denied. Please enter manually."
           }));
         }
       );
@@ -156,131 +189,208 @@ function FarmForm({ onSubmit }) {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Card>
-          <CardContent>
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-              <Typography variant="h5" gutterBottom sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                color: 'primary.main',
-                mb: 4 
-              }}>
-                <Warehouse className="mr-2" />
-                Farm Registration
-              </Typography>
-
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    name="farmName"
-                    label="Farm Name"
-                    value={formData.farmName}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    helperText="Enter your farm's business or trading name"
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    name="cropType"
-                    label="Primary Crop Type"
-                    value={formData.cropType}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    helperText="Select your main type of produce"
-                  >
-                    {cropTypes.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="area"
-                    type="number"
-                    label="Farm Area"
-                    value={formData.area}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    helperText="Enter area in acres"
-                    InputProps={{
-                      endAdornment: <Typography color="text.secondary">acres</Typography>
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    name="address"
-                    label="Farm Address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    helperText="Full address of your farm location"
-                    InputProps={{
-                      startAdornment: <MapPin className="mr-2 text-gray-400" size={20} />
-                    }}
-                  />
-                </Grid>
-              </Grid>
-
-              {location.loading && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  <CircularProgress size={24} />
-                  <Typography variant="body2" sx={{ ml: 1 }}>
-                    Detecting location...
-                  </Typography>
-                </Box>
-              )}
-
-              {location.error && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  {location.error}
-                </Alert>
-              )}
-
-              <Button 
-                type="submit"
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                sx={{ mt: 4 }}
+      <Box component="form" onSubmit={handleSubmit}>
+        <Grid container spacing={4}>
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2, 
+              mb: 2 
+            }}>
+              <Sprout size={24} style={{ color: theme.palette.primary.main }} />
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: theme.palette.text.primary,
+                  fontWeight: 600,
+                  fontFamily: 'Quicksand'
+                }}
               >
-                Register Farm
-              </Button>
+                Basic Information
+              </Typography>
             </Box>
-          </CardContent>
-        </Card>
+            <TextField
+              fullWidth
+              name="farmName"
+              label="Farm Name"
+              value={formData.farmName}
+              onChange={handleInputChange}
+              variant="outlined"
+              required
+              placeholder="Enter your farm's name"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Warehouse size={20} style={{ color: theme.palette.text.secondary }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              select
+              name="cropType"
+              label="Primary Crop Type"
+              value={formData.cropType}
+              onChange={handleInputChange}
+              variant="outlined"
+              required
+            >
+              {cropTypes.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{option.icon}</span>
+                    <span>{option.value}</span>
+                  </Box>
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              name="area"
+              type="number"
+              label="Farm Area"
+              value={formData.area}
+              onChange={handleInputChange}
+              variant="outlined"
+              required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Typography 
+                      sx={{ 
+                        color: theme.palette.text.secondary,
+                        fontWeight: 500 
+                      }}
+                    >
+                      acres
+                    </Typography>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2, 
+              mb: 1 
+            }}>
+              <Navigation size={24} style={{ color: theme.palette.primary.main }} />
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: theme.palette.text.primary,
+                  fontWeight: 600,
+                  fontFamily: 'Quicksand'
+                }}
+              >
+                Location Details
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              name="address"
+              label="Farm Address"
+              value={formData.address}
+              onChange={handleInputChange}
+              variant="outlined"
+              required
+              placeholder="Enter full address"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MapPin size={20} style={{ color: theme.palette.text.secondary }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+        </Grid>
+
+        {location.loading && (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2,
+            justifyContent: 'center', 
+            mt: 3,
+            p: 2,
+            borderRadius: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.5)'
+          }}>
+            <CircularProgress size={20} />
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.text.secondary,
+                fontWeight: 500
+              }}
+            >
+              Detecting your location...
+            </Typography>
+          </Box>
+        )}
+
+        {location.error && (
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mt: 3,
+              borderRadius: 2,
+              backgroundColor: 'rgba(229, 246, 253, 0.85)'
+            }}
+          >
+            {location.error}
+          </Alert>
+        )}
+
+        <Button 
+          type="submit"
+          variant="contained"
+          color="primary"
+          size="large"
+          fullWidth
+          sx={{ 
+            mt: 4,
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          Complete Registration
+          <ArrowRight size={20} />
+        </Button>
 
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
           <Alert 
             onClose={handleCloseSnackbar} 
             severity={snackbar.severity}
-            sx={{ width: '100%' }}
+            sx={{ 
+              width: '100%',
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}
           >
             {snackbar.message}
           </Alert>
         </Snackbar>
-      </Container>
+      </Box>
     </ThemeProvider>
   );
 }
