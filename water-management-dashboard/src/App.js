@@ -292,13 +292,13 @@ function App() {
                     {error}
                   </Alert>
                 )}
+
+                {/* Chat Component */}
+                <ChatBox />
               </Stack>
             </Grid>
           </Grid>
         </Container>
-
-        {/* Chat Component */}
-        <ChatBox isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </Box>
     </ThemeProvider>
   );

@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, Sprout } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageSquare } from 'lucide-react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const ChatBox = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState([{
-    text: "Hello! I'm your Smart Farm Assistant. I can help you with farming advice, irrigation tips, and crop management. How can I assist you today?",
-    sender: 'ai'
-  }]);
+const ChatBox = () => {
+  const [messages, setMessages] = useState([
+    {
+      type: 'system',
+      text: 'You are a highly experienced irrigation AI. Provide short, practical advice...'
+    },
+    {
+      type: 'user',
+      text: 'hi'
+    },
+    {
+      type: 'assistant',
+      text: "Sorry, I couldn't generate a response."
+    }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -25,31 +26,31 @@ const ChatBox = ({ isOpen, onClose }) => {
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { text: userMessage, sender: 'user' }]);
+    setMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setIsLoading(true);
 
     try {
       const genAI = new GoogleGenerativeAI("AIzaSyCESYMiKa5rTQLP2h1A8fDWUkQH73RRFzk");
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-      const farmingContext = `As an agricultural AI assistant, consider: 
-      - Sustainable farming practices
+      const farmingContext = `As an agricultural AI assistant specialized in irrigation, consider:
+      - Current weather conditions and forecasts
+      - Soil moisture levels and requirements
+      - Crop type and growth stage
       - Water conservation methods
-      - Crop health and disease prevention
-      - Soil management
-      - Weather impact on farming
+      - Sustainable farming practices
       
-      User Question: ${userMessage}`;
+      Provide practical, specific advice for: ${userMessage}`;
 
       const result = await model.generateContent(farmingContext);
       const response = await result.response;
       
-      setMessages(prev => [...prev, { text: response.text(), sender: 'ai' }]);
+      setMessages(prev => [...prev, { type: 'assistant', text: response.text() }]);
     } catch (error) {
       console.error('Error getting AI response:', error);
       setMessages(prev => [...prev, { 
-        text: 'Sorry, I encountered an error. Please try again.',
-        sender: 'ai'
+        type: 'assistant', 
+        text: "Sorry, I couldn't generate a response."
       }]);
     }
 
@@ -57,79 +58,67 @@ const ChatBox = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div 
-      className={`fixed top-20 right-4 w-96 bg-white shadow-2xl transform transition-all duration-300 ease-in-out ${
-        isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
-      } z-50 flex flex-col rounded-lg overflow-hidden`}
-    >
+    <div className="bg-white rounded-lg shadow-sm border border-[#A3C4BC]"
+         style={{
+           background: 'rgba(255, 255, 255, 0.95)',
+           backdropFilter: 'blur(8px)',
+         }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-[#62958D] text-white">
-        <div className="flex items-center gap-2">
-          <Sprout className="w-5 h-5" />
-          <h3 className="font-semibold text-lg">Farm Assistant</h3>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-white hover:text-gray-200 transition-colors p-1 hover:bg-[#4B746E] rounded"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      <div className="flex items-center gap-2 p-4 border-b border-[#A3C4BC]">
+        <MessageSquare size={20} className="text-[#62958D]" />
+        <h2 className="text-lg font-semibold text-[#2C4D47]">Chat with AI</h2>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
-        <div className="space-y-4">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${
-                message.sender === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[85%] p-3 rounded-lg ${
-                  message.sender === 'user'
-                    ? 'bg-[#62958D] text-white'
-                    : 'bg-white border border-[#A3C4BC] text-[#2C4D47]'
-                } shadow-sm`}
-              >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-[#A3C4BC] text-[#2C4D47] max-w-[85%] p-3 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#62958D] border-t-transparent"></div>
-                  <span className="text-sm">Thinking...</span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+      <div className="max-h-[400px] overflow-y-auto px-4">
+        <div className="text-right mb-4">
+          <span className="text-xs text-[#5C7972] mb-1 block">SYSTEM</span>
+          <p className="text-sm text-[#2C4D47]">
+            You are a highly experienced irrigation AI. Provide short, practical advice...
+          </p>
         </div>
+
+        <div className="mb-4">
+          <span className="text-xs text-[#5C7972] mb-1 block">USER</span>
+          <p className="text-sm text-[#2C4D47]">
+            hi
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <span className="text-xs text-[#5C7972] mb-1 block">ASSISTANT</span>
+          <p className="text-sm text-[#2C4D47]">
+            Sorry, I couldn't generate a response.
+          </p>
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center gap-2 text-[#5C7972] mb-4">
+            <div className="animate-spin h-4 w-4 border-2 border-[#62958D] border-t-transparent rounded-full"></div>
+            <span className="text-sm">Thinking...</span>
+          </div>
+        )}
       </div>
 
       {/* Input */}
-      <form onSubmit={sendMessage} className="border-t border-[#A3C4BC] p-4 bg-white">
-        <div className="flex space-x-2">
+      <div className="p-4 border-t border-[#A3C4BC]">
+        <form onSubmit={sendMessage} className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about farming, crops, or irrigation..."
-            className="flex-1 border border-[#A3C4BC] rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#62958D] text-[#2C4D47] placeholder-[#5C7972]"
+            placeholder="Ask about irrigation..."
+            className="flex-1 px-4 py-2 text-sm bg-white border border-[#A3C4BC] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#62958D]"
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-[#62958D] text-white rounded-lg px-4 py-2 hover:bg-[#4B746E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="bg-[#62958D] text-white px-6 py-2 rounded-lg hover:bg-[#4B746E] disabled:opacity-50 text-sm font-medium"
           >
-            <Send className="w-4 h-4" />
+            SEND
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
