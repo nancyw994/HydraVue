@@ -33,6 +33,10 @@ import { db } from "./firebaseConfig";
 import ChatBox from "./Components/ChatBox";  // 引入 ChatBox 组件
 import "./App.css";
 
+import Login from "./Components/Login";
+import { auth } from "./firebaseConfig";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+
 // 创建 MUI 主题
 const theme = createTheme({
   palette: {
@@ -452,7 +456,7 @@ function IrrigationBar({ index }) {
 /* -------------------------
    4. Main App Component
 --------------------------*/
-function App() {
+function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [weather, setWeather] = useState({
@@ -784,4 +788,60 @@ function App() {
   );
 }
 
-export default App;
+
+// App.js
+//import Dashboard from "./App"; // Assuming the Dashboard function is defined in the same file
+ // If App is your full dashboard
+
+function AppWrapper() {
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoadingAuth(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      console.log("User logged out");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+  
+
+  if (loadingAuth) return <div>Loading...</div>;
+  if (!user) return <Login onLogin={setUser} />;
+
+  return (
+    <>
+      <Button
+        onClick={handleLogout}
+        variant="outlined"
+        sx={{
+        position: "absolute",
+        top: 16,
+        right: 16,
+        zIndex: 10,
+        backgroundColor: "#fff",
+        color: "#62958D",
+        borderColor: "#62958D",
+        "&:hover": {
+          backgroundColor: "#f0f0f0"
+      }
+    }}
+  >
+    Logout
+  </Button>
+      <Dashboard /> {/* <- use renamed component */}
+    </>
+  );
+}
+
+export default AppWrapper;
