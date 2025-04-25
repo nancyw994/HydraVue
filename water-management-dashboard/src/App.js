@@ -28,6 +28,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import ArrowDropDownCircleIcon from "@mui/icons-material/ArrowDropDownCircle";
+import AirIcon from "@mui/icons-material/Air";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import ChatBox from "./Components/ChatBox";  // 引入 ChatBox 组件
@@ -36,6 +37,8 @@ import "./App.css";
 import Login from "./Components/Login";
 import { auth } from "./firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import SmartIrrigationAdvice from "./Components/SmartIrrigationAdvice";
+
 
 // 创建 MUI 主题
 const theme = createTheme({
@@ -366,6 +369,7 @@ function FarmForm({ onSubmit, onAddressChange }) {
 /* -------------------------
    3. Smart Irrigation Advice Component
 --------------------------*/
+/*
 function calculateWaterIndex({ cropType, temperature, rainfall, humidity }) {
   if (!cropType || temperature == null || rainfall == null || humidity == null) {
     return null;
@@ -381,7 +385,9 @@ function calculateWaterIndex({ cropType, temperature, rainfall, humidity }) {
   if (base > 100) base = 100;
   return Math.round(base);
 }
+*/
 
+/*
 function SmartIrrigationAdvice({ cropType, temperature, humidity, rainfall }) {
   const index = calculateWaterIndex({ cropType, temperature, rainfall, humidity });
   const dataEnough = index !== null;
@@ -416,7 +422,9 @@ function SmartIrrigationAdvice({ cropType, temperature, humidity, rainfall }) {
     </Card>
   );
 }
+*/
 
+/*
 function IrrigationBar({ index }) {
   const arrowPosition = `${index}%`;
   let waterMessage = "Water need is moderate.";
@@ -452,6 +460,7 @@ function IrrigationBar({ index }) {
     </>
   );
 }
+*/
 
 /* -------------------------
    4. Main App Component
@@ -462,7 +471,8 @@ function Dashboard() {
   const [weather, setWeather] = useState({
     temperature: null,
     humidity: null,
-    rainfall: null
+    rainfall: null,
+    windSpeed: null
   });
   const [farmData, setFarmData] = useState({});
   const [chatMessages, setChatMessages] = useState([
@@ -496,7 +506,8 @@ function Dashboard() {
             setWeather({
               temperature: data.current.temp_c,
               humidity: data.current.humidity,
-              rainfall: data.current.precip_mm
+              rainfall: data.current.precip_mm,
+              windSpeed: data.current.wind_kph
             });
           }
         } catch (error) {
@@ -520,7 +531,8 @@ function Dashboard() {
         setWeather({
           temperature: data.main.temp,
           humidity: data.main.humidity,
-          rainfall: data.rain ? data.rain["1h"] || 0 : 0
+          rainfall: data.rain ? data.rain["1h"] || 0 : 0,
+          windSpeed: data.wind?.speed || 0
         });
       }
     } catch (err) {
@@ -543,7 +555,8 @@ function Dashboard() {
         setWeather({
           temperature: data.main.temp,
           humidity: data.main.humidity,
-          rainfall: data.rain ? data.rain["1h"] || 0 : 0
+          rainfall: data.rain ? data.rain["1h"] || 0 : 0,
+          windSpeed: data.wind?.speed || 0
         });
       }
     } catch (err) {
@@ -675,60 +688,80 @@ function Dashboard() {
               <Stack spacing={4}>
                 {/* Environmental Stats */}
                 <Card
-                  sx={{
-                    background: "rgba(255, 255, 255, 0.92)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(163, 196, 188, 0.2)",
-                    borderRadius: 4
-                  }}
-                >
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom sx={{ color: "#2C4D47" }}>
-                      Current Conditions
-                    </Typography>
-                    <Grid container spacing={3} sx={{ mt: 1 }}>
-                      <Grid item xs={4}>
-                        <Stack alignItems="center" spacing={1}>
-                          <Thermometer style={{ color: "#62958D" }} size={28} />
-                          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
-                            Temperature
-                          </Typography>
-                          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
-                            {weather.temperature !== null ? `${weather.temperature}°C` : "N/A"}
-                          </Typography>
-                        </Stack>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <Stack alignItems="center" spacing={1}>
-                          <CloudRain style={{ color: "#62958D" }} size={28} />
-                          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
-                            Rainfall
-                          </Typography>
-                          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
-                            {weather.rainfall !== null ? `${weather.rainfall} mm` : "N/A"}
-                          </Typography>
-                        </Stack>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <Stack alignItems="center" spacing={1}>
-                          <Sprout style={{ color: "#62958D" }} size={28} />
-                          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
-                            Humidity
-                          </Typography>
-                          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
-                            {weather.humidity !== null ? `${weather.humidity}%` : "N/A"}
-                          </Typography>
-                        </Stack>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
+  sx={{
+    background: "rgba(255, 255, 255, 0.92)",
+    backdropFilter: "blur(8px)",
+    border: "1px solid rgba(163, 196, 188, 0.2)",
+    borderRadius: 4
+  }}
+>
+  <CardContent sx={{ p: 3 }}>
+    <Typography variant="h6" gutterBottom sx={{ color: "#2C4D47" }}>
+      Current Conditions
+    </Typography>
+    <Grid container spacing={3} sx={{ mt: 1 }}>
+      {/* Temperature */}
+      <Grid item xs={6} md={3}>
+        <Stack alignItems="center" spacing={1}>
+          <Thermometer style={{ color: "#62958D" }} size={28} />
+          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
+            Temperature
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
+            {weather.temperature !== null ? `${weather.temperature}°C` : "N/A"}
+          </Typography>
+        </Stack>
+      </Grid>
+
+      {/* Rainfall */}
+      <Grid item xs={6} md={3}>
+        <Stack alignItems="center" spacing={1}>
+          <CloudRain style={{ color: "#62958D" }} size={28} />
+          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
+            Rainfall
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
+            {weather.rainfall !== null ? `${weather.rainfall} mm` : "N/A"}
+          </Typography>
+        </Stack>
+      </Grid>
+
+      {/* Humidity */}
+      <Grid item xs={6} md={3}>
+        <Stack alignItems="center" spacing={1}>
+          <Sprout style={{ color: "#62958D" }} size={28} />
+          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
+            Humidity
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
+            {weather.humidity !== null ? `${weather.humidity}%` : "N/A"}
+          </Typography>
+        </Stack>
+      </Grid>
+
+      {/* 🌬️ Wind Speed */}
+      <Grid item xs={6} md={3}>
+        <Stack alignItems="center" spacing={1}>
+          <AirIcon style={{ color: "#62958D" }} />
+          <Typography variant="body2" sx={{ color: "#5C7972", fontWeight: 500 }}>
+            Wind Speed
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#2C4D47" }}>
+            {weather.windSpeed !== null ? `${weather.windSpeed} km/h` : "N/A"}
+          </Typography>
+        </Stack>
+      </Grid>
+    </Grid>
+  </CardContent>
+</Card>
+
                 {/* Smart Irrigation Advice Card */}
                 <SmartIrrigationAdvice
                   cropType={farmData.cropType}
                   temperature={weather.temperature}
                   humidity={weather.humidity}
                   rainfall={weather.rainfall}
+                  windSpeed = {weather.windSpeed}
                 />
                 {/* ChatBox Component */}
                 <ChatBox />
