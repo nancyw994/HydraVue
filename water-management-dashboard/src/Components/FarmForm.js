@@ -26,21 +26,27 @@ const theme = createTheme({
 const reverseGeocode = async (lat, lng) => {
   try {
     const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-    const allOriginsUrl = `https://api.allorigins.hexocode.repl.co/get?disableCache=true&url=${encodeURIComponent(nominatimUrl)}`;
+    const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(nominatimUrl)}`;
+
     const response = await fetch(allOriginsUrl);
     if (!response.ok) {
       throw new Error(`AllOrigins error: ${response.status}`);
     }
+
     const data = await response.json();
-    // AllOrigins 返回的数据在 data.contents 内，是字符串格式的 JSON
+
+    // This line is CRITICAL — allorigins wraps content as stringified JSON
     const contents = JSON.parse(data.contents);
-    console.log("Reverse geocode data:", contents);
+
+    console.log("Reverse geocode result:", contents);
     return contents.display_name || "";
   } catch (error) {
-    console.error("Reverse geocoding failed:", error);
+    console.error("Reverse geocode failed:", error);
     return "";
   }
 };
+
+
 
 const fetchWaterAdviceGemini = async (formData, safeWeatherData, location) => {
   const genAI = new GoogleGenerativeAI("AIzaSyCESYMiKa5rTQLP2h1A8fDWUkQH73RRFzk");
@@ -200,19 +206,31 @@ function FarmForm({ onSubmit, onAddressChange }) {
   // 自动定位并调用反向地理编码获取地址
   useEffect(() => {
     if (navigator.geolocation) {
+      console.log("Attempting to detect location...");
+  
       setLocation(prev => ({ ...prev, loading: true }));
+  
+      console.log("📍 Requesting location...");
+      let timeout = setTimeout(() => {
+        console.warn("⚠️ Location request timed out manually after 10s");
+      }, 10000);
+      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          clearTimeout(timeout);
           const { latitude, longitude } = position.coords;
-          console.log("Auto-detected lat/lng:", latitude, longitude);
+          console.log("✅ Location retrieved:", latitude, longitude);
+      
           setLocation(prev => ({
             ...prev,
             latitude,
             longitude,
             loading: false
           }));
+      
           const addr = await reverseGeocode(latitude, longitude);
-          console.log("Auto-detected address:", addr);
+          console.log("📍 Reverse geocoded address:", addr);
+      
           if (addr) {
             setFormData(prev => ({ ...prev, address: addr }));
             setSnackbar({
@@ -223,16 +241,31 @@ function FarmForm({ onSubmit, onAddressChange }) {
           }
         },
         (error) => {
-          console.error("Geolocation error:", error);
+          clearTimeout(timeout);
+          console.error("❌ Geolocation error:", error);
           setLocation(prev => ({
             ...prev,
             loading: false,
             error: "Location access denied. Please try again."
           }));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
+      
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+      setLocation(prev => ({
+        ...prev,
+        loading: false,
+        error: "Geolocation not supported."
+      }));
     }
   }, []);
+  
 
   return (
     <ThemeProvider theme={theme}>
