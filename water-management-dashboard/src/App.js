@@ -51,28 +51,32 @@ const theme = createTheme({
   }
 });
 
+
 // reverseGeocode 函数（用于获取地址）
 const reverseGeocode = async (lat, lng) => {
   try {
     const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        "User-Agent": "MyFarmApp/1.0 (contact@example.com)"
-      }
-    });
+    const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(nominatimUrl)}`;
+
+    const response = await fetch(allOriginsUrl);
     if (!response.ok) {
-      throw new Error(`Nominatim error: ${response.status}`);
+      throw new Error(`AllOrigins error: ${response.status}`);
     }
+
     const data = await response.json();
-    console.log("Nominatim response:", data);
-    if (data.display_name) {
-      return data.display_name;
-    }
+
+    // This line is CRITICAL — allorigins wraps content as stringified JSON
+    const contents = JSON.parse(data.contents);
+
+    console.log("Reverse geocode result:", contents);
+    return contents.display_name || "";
   } catch (error) {
-    console.error("Reverse geocoding failed:", error);
+    console.error("Reverse geocode failed:", error);
+    return "";
   }
-  return "";
 };
+
+
 
 function FarmForm({ onSubmit, onAddressChange }) {
   const [formData, setFormData] = useState({
@@ -171,7 +175,7 @@ function FarmForm({ onSubmit, onAddressChange }) {
     if (navigator.geolocation) {
       setLocation(prev => ({ ...prev, loading: true }));
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
           setLocation(prev => ({
             ...prev,
@@ -179,31 +183,25 @@ function FarmForm({ onSubmit, onAddressChange }) {
             longitude,
             loading: false
           }));
-          const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-          const proxyUrl = `https://thingproxy.freeboard.io/fetch/${nominatimUrl}`;
-          fetch(proxyUrl)
-            .then(response => {
-              if (!response.ok) throw new Error("Network response was not ok");
-              return response.json();
-            })
-            .then(data => {
-              console.log("Reverse geocode data:", data);
-              if (data.display_name) {
-                setFormData(prev => ({ ...prev, address: data.display_name }));
-                setSnackbar({
-                  open: true,
-                  message: "Location detected successfully",
-                  severity: "success"
-                });
-              }
-            })
-            .catch(error => {
-              console.error("Reverse geocode error:", error);
-              setLocation(prev => ({
-                ...prev,
-                error: "Failed to fetch address. Please try again."
-              }));
-            });
+  
+          try {
+            const addr = await reverseGeocode(latitude, longitude);
+            console.log("Reverse geocode data:", addr);
+            if (addr) {
+              setFormData(prev => ({ ...prev, address: addr }));
+              setSnackbar({
+                open: true,
+                message: "Location detected successfully",
+                severity: "success"
+              });
+            }
+          } catch (error) {
+            console.error("Reverse geocode error:", error);
+            setLocation(prev => ({
+              ...prev,
+              error: "Failed to fetch address. Please try again."
+            }));
+          }
         },
         (error) => {
           console.error("Geolocation error:", error);
@@ -216,6 +214,7 @@ function FarmForm({ onSubmit, onAddressChange }) {
       );
     }
   }, []);
+  
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
